@@ -1,3 +1,4 @@
+import { AppError } from '../utils/AppError';
 import { supabase } from './dbService';
 
 export const addInvites = async (
@@ -10,7 +11,7 @@ export const addInvites = async (
   userId: string,
   now: string
 ): Promise<void> => {
-  await supabase
+  const { error } = await supabase
     .from('invites')
     .insert([
       {
@@ -27,6 +28,7 @@ export const addInvites = async (
     ])
     .select()
     .single();
+    if (error) throw new AppError(error.message, 500);
 };
 
 export const updateInvite = async (invite: { id: string }): Promise<any> => {

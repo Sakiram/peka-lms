@@ -1,5 +1,6 @@
 import { supabase } from './dbService';
 import { AppError } from '../utils/AppError';
+import { User } from '../types/user';
 
 export const checkDuplicateUser = async (org_id: string, email: string): Promise<any> => {
   const { data: existingUser, error } = await supabase
@@ -12,39 +13,28 @@ export const checkDuplicateUser = async (org_id: string, email: string): Promise
   return existingUser;
 };
 
-export const addUser = async (
-  userId: string,
-  orgId: string,
-  email: string,
-  hashedPassword: string | null,
-  firstname: string | null,
-  lastname: string | null,
-  username: string | null,
-  manager_id: string | null,
-  status: string,
-  role: string,
-  now: string
-): Promise<any> => {
-  const { error } = await supabase.from('users').insert([
+export const addUser = async (data: User): Promise<any> => {
+  const { data:user, error } = await supabase.from('users').insert([
     {
-      id: userId,
-      organization_id: orgId,
-      email,
-      password_hash: hashedPassword,
-      first_name: firstname,
-      last_name: lastname,
-      username,
-      role,
-      manager_id,
-      status,
-      join_date: now,
-      created_at: now,
-      updated_at: now,
-      created_by: userId,
+      id: data.id,
+      organization_id: data.org_id,
+      email: data.email,
+      password_hash: data.password,
+      first_name: data?.first_name,
+      last_name: data?.last_name,
+      username: data.username,
+      role: data.role,
+      manager_id: data.manager_id,
+      status: data.status,
+      join_date: data.created_at,
+      created_at: data.created_at,
+      updated_at: data.created_at,
+      created_by: data.created_by,
     },
   ]);
-  return error;
-};
+  if (error || !data) throw new AppError(error?.message || "Error on insert", 400);
+  return user;
+};  
 
 export const updateUser = async (
   password_hash: string,

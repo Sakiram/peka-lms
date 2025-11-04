@@ -1,15 +1,16 @@
 import { WelcomeEmail } from "../services/emailService"
 import { hashPassword } from "../services/authService";
-import {Request, Response} from "express";
+import {NextFunction, Request, Response} from "express";
 import { checkDuplicateOrg, createOrg } from "../services/orgService";
 import { addUser } from "../services/userService";
 import { getCurrentTime, uuid } from '../middleware/commonMiddleware';
 import { AppError, getErrorMessage } from '../utils/AppError';
 import dotenv from 'dotenv';
+import { User } from "../types/user";
 
 dotenv.config();
 
-export const createOrganization = async (req: Request, res: Response) => {
+export const createOrganization = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { org_name, domain, org_email, password, firstname, lastname, username } = req.body;
     if (!org_name || !domain || !org_email || !password || !firstname || !lastname || !username) {
@@ -17,9 +18,8 @@ export const createOrganization = async (req: Request, res: Response) => {
     }
     const isDuplicate = await checkDuplicateOrg(org_email, domain);
     if(isDuplicate) {
-      throw new AppError("Organization email or domain already present", 409);
+      res.status(409).json({message: "Organization email or domain already present"});
     }
-    
     const hashedPassword = await hashPassword(password);
     const orgId = uuid();
     const userId = uuid();
@@ -27,13 +27,11 @@ export const createOrganization = async (req: Request, res: Response) => {
     const now = getCurrentTime();
 
     const orgError = await createOrg(orgId, org_name, org_email, domain, now, userId);
-     if (orgError) {
-      throw new AppError( "Organization creation failed.", 400)
+    if (orgError) {
+      res.status(400).json({message: "Organization creation failed."});
     }
-    const userErr = await addUser(userId, orgId, org_email, hashedPassword, firstname, lastname, username, null, "ACTIVE", "ADMIN", now);
-    if (userErr){
-      throw new AppError("Admin creation failed.", 400);
-    }
+    const data:User = { id: userId, org_id: orgId, email:org_email, password:hashedPassword, first_name:firstname, last_name:lastname, username, status: "ACTIVE", role: "ADMIN", created_at: now, created_by: userId};
+    await addUser(data);
     WelcomeEmail( org_email, org_name, firstname, notificationId, now, userId);
     return res.status(201).json({
       message: "Organization created successfully.",
@@ -41,6 +39,6 @@ export const createOrganization = async (req: Request, res: Response) => {
       admin_id: userId,
     });
   } catch (err) {
-    throw new AppError("Internal server error", 500)
+    next(err);
   }
 };
