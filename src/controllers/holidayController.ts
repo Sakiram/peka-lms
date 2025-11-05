@@ -36,7 +36,9 @@ export const createHoliday = async (req: Request, res: Response, next: NextFunct
 export const getAllHolidays = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const orgId = req.user?.org_id!;
-    const holidays = await holidayService.getHolidays(orgId);
+    const { next } = req.query;
+    const rangeDays = next ? parseInt(String(next).replace('d', ''), 10) : undefined;
+    const holidays = await holidayService.getHolidays(orgId, rangeDays);
     res.status(200).json(holidays);
   } catch (err) {
     next(err);

@@ -31,15 +31,41 @@ export const addHoliday = async (holiday: Holiday) => {
   if (error) throw new AppError(error.message, 400);
 };
 
-export const getHolidays = async (org_id: string): Promise<Holiday[]> => {
-  const { data, error }: { data: Holiday[] | null; error: PostgrestError | null } = await supabase
+export const getHolidays = async (org_id: string, nextDays?: number): Promise<Holiday[]> => {
+  const { data, error } = await supabase
     .from('holidays')
     .select('*')
     .eq('organization_id', org_id)
     .order('holiday_date', { ascending: true });
 
   if (error) throw new AppError(error.message, 400);
-  return data ?? [];
+  if (!data) return [];
+  
+  const today = new Date();
+  const year = today.getFullYear();
+  const nextDate = new Date();
+  if (nextDays && !isNaN(nextDays)) 
+    nextDate.setDate(today.getDate() + nextDays);
+
+  return data
+    .map((h) => {
+      const baseDate = new Date(h.holiday_date);
+      const adjustedDate = h.recurring ? new Date(`${year}-${baseDate.getMonth() + 1}-${baseDate.getDate()}`) : baseDate;
+
+      const isUpcoming = adjustedDate >= today;
+      return {
+        ...h,
+        holiday_date: adjustedDate.toISOString().split('T')[0],
+        is_upcoming: isUpcoming,
+      };
+    })
+    .filter((h) => {
+      const date = new Date(h.holiday_date);
+      if (nextDays && !isNaN(nextDays)) {
+        return date >= today && date <= nextDate;
+      }
+      return date.getFullYear() === year;
+    });
 };
 
 export const updateHoliday = async (id: string, updates: Partial<Holiday>): Promise<Holiday> => {
