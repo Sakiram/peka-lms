@@ -35,20 +35,40 @@ export const WelcomeEmail = async (
   userId: string
 ): Promise<void> => {
   const subject = `Welcome to ${org_name}!`;
-  const msg = `<h2>Hi ${firstname},</h2><p>Your org ${org_name} onboarded successfully.</p>`;
+  const msg = `<h2>Hi ${firstname},</h2><p>Your org ${org_name} is onboarded successfully.</p>`;
   await sendMail(org_email, subject, msg);
   await storeNotifications(notificationId, userId, 'INVITE_SENT', subject, now);
 };
 
-export const inviteEmail = async (
-  email: string,
-  userId: string,
-  now: string,
-  token?: string
-): Promise<void> => {
+const requestMsg = (manager_name: string) => {
+  return `<h2>Leave Request</h2><p>Hi ${manager_name}, You have a leave request</p>`;
+}
+
+const reviewMsg = (firstName: string, leaveStatus: string) => {
+  return `<h2>Leave Request has been ${leaveStatus}</h2><p>Hi ${firstName}, Your leave request has been ${leaveStatus}</p>`;
+}
+
+export const inviteEmail = async ( email: string, userId: string, now: string, token: string, org_name: string, firstName: string): Promise<void> => {
   const notificationId = uuid();
-  const subject = `Welcome to leo!`;
-  const msg = `<h2>Hi leo,</h2><p>Your org ${token} onboarded successfully.</p>`;
+  const subject = `Welcome to ${org_name}!`;
+  const msg = `<h2>Hi ${firstName},</h2><p>Your are onboarded into ${org_name} successfully.</p>
+  <p>Click <a href="http://localhost:5000/auth/set-password?token=${token}">here</a> to set-password and login</p>`;
   await sendMail(email, subject, msg);
   await storeNotifications(notificationId, userId, 'INVITE_SENT', subject, now);
+};
+
+export const requestEmail = async ( email: string, managerName: string, userId: string, now: string): Promise<void> => {
+  const notificationId = uuid();
+  const subject = `Leave Request`;
+  const msg = requestMsg(managerName);
+  await sendMail(email, subject, msg);
+  await storeNotifications(notificationId, userId, 'LEAVE_APPLIED', subject, now);
+};
+
+export const reviewEmail = async ( email: string, firstName: string, userId: string, leaveStatus:string, now: string): Promise<void> => {
+  const notificationId = uuid();
+  const subject = `your leave has been reviewed`;
+  const msg = reviewMsg(firstName, leaveStatus);
+  await sendMail(email, subject, msg);
+  await storeNotifications(notificationId, userId, leaveStatus, subject, now);
 };
