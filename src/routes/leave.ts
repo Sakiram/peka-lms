@@ -6,11 +6,19 @@ import {
   approveLeave,
   rejectLeave,
   cancelLeave,
+  getMyLeaves,
+  getRequestedLeaves,
+  getLeaveBalance,
+  getLeaveLogs,
 } from '../controllers/leaveController';
 
 const router = express.Router();
 
 router.post('/', authenticate, applyLeave);
+router.get('/', authenticate, getMyLeaves);
+router.get('/balance', authenticate, getLeaveBalance);
+router.get('/logs/:id', authenticate, getLeaveLogs);
+router.get('/requests', authenticate, getRequestedLeaves);
 router.put('/:id/approve', authenticate, approveLeave);
 router.put('/:id/reject', authenticate, rejectLeave);
 router.put('/:id/cancel', authenticate, cancelLeave);

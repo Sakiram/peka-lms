@@ -1,10 +1,7 @@
-// src/services/leaveService.ts
 import { supabase } from './dbService';
 import { AppError } from '../utils/AppError';
 import { v4 as uuidv4 } from 'uuid';
 import { getCurrentTime } from '../middleware/commonMiddleware';
-import { getUserInfo } from './userService';
-import { User } from '../types/user';
 
 export type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 export type LeaveAction = 'CREATED' | 'UPDATED' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
@@ -28,6 +25,133 @@ export interface Leave {
   created_at: string;
   updated_at: string;
 }
+
+interface LeaveBalance {
+  id: string;
+  leave_type_id: string;
+  year: number;
+  allocated_days: number;
+  used_days: number;
+  remaining_days: number;
+  carried_forward_days: number;
+  leave_types?: {
+    name: string;
+  };
+}
+
+interface LeaveLog {
+  id: string;
+  action: string;
+  remarks: string | null;
+  created_at: string;
+  action_by: string;
+  user?: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    role: string;
+  };
+}
+
+interface LeaveFilters {
+  status?: string;
+  year?: number;
+  type?: string;
+}
+
+export const getUserLeaveBalance = async (orgId: string, userId: string): Promise<LeaveBalance[]> => {
+  const { data, error } = await supabase
+    .from('leave_balances')
+    .select(`
+      id,
+      leave_type_id,
+      year,
+      allocated_days,
+      used_days,
+      remaining_days,
+      carried_forward_days,
+      leave_types(name)
+    `)
+    .eq('organization_id', orgId)
+    .eq('user_id', userId)
+    .eq('year', new Date().getFullYear())
+    .order('leave_type_id', { ascending: true });
+      console.log(data);
+  if (error) throw new AppError(error.message, 400);
+  const fixedData = (data ?? []).map((field) => ({
+    ...field,
+    leave_types: Array.isArray(field.leave_types) ? field.leave_types[0] : field.leave_types,
+  }));
+  return fixedData ?? [];
+};
+
+export const getUserLeaves = async (orgId: string, userId: string, filters?: LeaveFilters): Promise<Leave[]> => {
+  let query = supabase
+    .from('leaves')
+    .select(`
+      *,
+      leave_types(name),
+      approver:users!leaves_approved_by_fkey(email, first_name, last_name)
+    `)
+    .eq('organization_id', orgId)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (filters?.status) query = query.eq('status', filters.status);
+  if (filters?.type) query = query.ilike('leave_types.name', `%${filters.type}%`);
+  const { data, error } = await query;
+  if (error) throw new AppError(error.message, 400);
+  return data ?? [];
+};
+
+export const getManagerLeaves = async (orgId: string, managerId: string): Promise<Leave[]> => {
+  const { data: subordinates, error: subErr } = await supabase
+    .from('users')
+    .select('id')
+    .eq('organization_id', orgId)
+    .eq('manager_id', managerId);
+
+  if (subErr) throw new AppError(subErr.message, 400);
+  if (!subordinates || subordinates.length === 0) return [];
+  const subordinateIds = subordinates.map((user) => user.id);
+
+  const { data, error } = await supabase
+    .from('leaves')
+    .select(`
+      *,
+      applicant:users!leaves_user_id_fkey(email, first_name, last_name),
+      approver:users!leaves_approved_by_fkey(email, first_name, last_name),
+      leave_types(name)
+    `)
+    .eq('organization_id', orgId)
+    .in('user_id', subordinateIds)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new AppError(error.message, 400);
+  return data ?? [];
+};
+
+export const getLeaveLogs = async (leaveId: string): Promise<LeaveLog[]> => {
+  const { data, error } = await supabase
+    .from('leave_logs')
+    .select(`
+      id,
+      action,
+      remarks,
+      created_at,
+      action_by,
+      users:users!leave_logs_action_by_fkey(first_name, last_name, email, role)
+    `)
+    .eq('leave_id', leaveId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw new AppError(error.message, 400);
+
+  return (data ?? []).map((log) => ({
+    ...log,
+    user: Array.isArray(log.users) ? log.users[0] : log.users,
+  }));
+};
 
 export const ensureLeaveBalance = async (
   org_id: string,
@@ -106,7 +230,7 @@ export const validateLeaveRequest = async (
     throw new AppError('Insufficient leave balance', 400);
 };
 
-export const applyLeave = async (leave: Omit<Leave, 'id' | 'status' | 'applied_on' | 'created_at' | 'updated_at'>) => {
+export const applyLeave = async (leave: Omit<Leave, 'id' | 'status' | 'applied_on' | 'created_at' | 'updated_at'>, managerId: string) => {
   const id = uuidv4();
   const nowTime = getCurrentTime();
 
@@ -118,7 +242,7 @@ export const applyLeave = async (leave: Omit<Leave, 'id' | 'status' | 'applied_o
     created_at: nowTime,
     updated_at: nowTime,
   };
-  const manager = await getManagerInfo(leave.organization_id, leave.user_id);
+  const manager = await getManagerInfo(leave.organization_id, managerId);
 
   const { data, error } = await supabase.from('leaves').insert([record]).select().single();
   if (error) throw new AppError(error.message, 400);
@@ -146,7 +270,7 @@ export const updateLeaveStatus = async (
   // Only manager can act
   const { data: user } = await supabase
     .from('users')
-    .select('manager_id')
+    .select('manager_id, email, first_name')
     .eq('id', leave.user_id)
     .single();
 
@@ -190,14 +314,19 @@ export const updateLeaveStatus = async (
   }
 
   await addLeaveLog(id, action, `Leave ${action.toLowerCase()} by manager`, managerId);
+  return user;
 };
 
 export const cancelLeave = async (id: string, userId: string) => {
   const { data: leave } = await supabase.from('leaves').select('*').eq('id', id).single();
   if (!leave) throw new AppError('Leave not found', 404);
 
-  if (leave.status !== 'APPROVED')
-    throw new AppError('Only approved leaves can be cancelled', 400);
+  if (leave.user_id !== userId) {
+    throw new AppError('You can only cancel your own leave', 403);
+  }
+  if (leave.status !== 'PENDING') {
+    throw new AppError('Only pending leave requests can be cancelled', 400);
+  }
 
   const { error: updErr } = await supabase
     .from('leaves')
@@ -206,29 +335,7 @@ export const cancelLeave = async (id: string, userId: string) => {
 
   if (updErr) throw new AppError(updErr.message, 400);
 
-  // Restore balance
-  const year = new Date(leave.start_date).getFullYear();
-  const { data: balance } = await supabase
-    .from('leave_balances')
-    .select('*')
-    .eq('user_id', leave.user_id)
-    .eq('organization_id', leave.organization_id)
-    .eq('leave_type_id', leave.leave_type_id)
-    .eq('year', year)
-    .single();
-
-  if (balance) {
-    await supabase
-      .from('leave_balances')
-      .update({
-        used_days: balance.used_days - leave.total_days,
-        remaining_days: balance.remaining_days + leave.total_days,
-        updated_at: getCurrentTime(),
-      })
-      .eq('id', balance.id);
-  }
-
-  await addLeaveLog(id, 'CANCELLED', 'Leave cancelled by user', userId);
+  await addLeaveLog(id, 'CANCELLED', 'Leave request withdrawn by user', userId);
 };
 
 export const addLeaveLog = async (leave_id: string, action: LeaveAction, remarks: string, action_by: string) => {
@@ -238,16 +345,12 @@ export const addLeaveLog = async (leave_id: string, action: LeaveAction, remarks
   if (error) throw new AppError(error.message, 400);
 };
 
-export const getManagerInfo = async (orgId: string, userId: string) => {
-    const user = await getUserInfo(orgId, userId);
-    if(!user.manager_id){
-        throw new AppError('User does not have a reporting manager assigned', 400);
-    }
+export const getManagerInfo = async (orgId: string, managerId: string) => {
     const { data: manager, error } = await supabase
     .from('users')
     .select('*')
     .eq('organization_id', orgId)
-    .eq('id', user.manager_id)
+    .eq('id', managerId)
     .single();
     if (error || !manager) {
         throw new AppError('Reporting manager not found', 404);
