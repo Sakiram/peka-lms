@@ -13,12 +13,13 @@ export const login = async (req: Request, res:Response) => {
   const valid = await comparePassword(password, user.password_hash);
   if (!valid) throw new AppError('Invalid Password', 400)
 
-  const token = generateToken({ id: user.id, org_id: user.organization_id, role: user.role });
+  const token = generateToken({ id: user.id, org_id: user.organization_id, role: user.role, manager_id: user.manager_id, first_name: user.first_name });
   res.json({ token, user: user });
 };
 
 export const setPassword = async (req: Request, res: Response) => {
-  const { token, password, firstName, lastName, userName } = req.body;
+  const { password, firstName, lastName, userName } = req.body;
+  const token = req.query.token as string;
 
   const { invite, inviteErr } = await getInviteData(token);
   if (!invite || inviteErr) throw new AppError('Invalid token', 400);

@@ -13,6 +13,8 @@ export const checkDuplicateUser = async (org_id: string, email: string): Promise
   return existingUser;
 };
 
+export const getOrgName = async(organization_id: string) => await supabase.from('organizations').select('org_name').eq('id', organization_id).single();
+
 export const addUser = async (data: User): Promise<any> => {
   const { data:user, error } = await supabase.from('users').insert([
     {
@@ -58,13 +60,3 @@ export const updateUser = async (
     .eq('organization_id', invite.organization_id);
   return error;
 };
-
-export const getUserInfo = async(orgId: string, userId: string) => {
-  const { data: user, error } = await supabase.from('users')
-    .select('*')
-    .eq('organization_id', orgId)
-    .eq('id', userId)
-    .single();
-  if (error) throw new AppError(error.message, 404);
-  return user;
-}
