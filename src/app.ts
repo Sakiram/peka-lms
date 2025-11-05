@@ -8,6 +8,7 @@ import orgRoutes from "./routes/org";
 import { errorHandler } from "./middleware/errorHandler";
 import leaveTypeRoutes from './routes/leaveTypes';
 import holidayRoutes from './routes/holiday';
+import leaveRoutes from './routes/leave';
 
 dotenv.config();
 const app = express();
@@ -21,6 +22,7 @@ app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/users`, userRoutes);
 app.use(`${API_PREFIX}/invites`, inviteRoutes);
 app.use(`${API_PREFIX}/leave-types`, leaveTypeRoutes);
+app.use(`${API_PREFIX}/leaves`, leaveRoutes);
 app.use(`${API_PREFIX}/holidays`, holidayRoutes);
 
 app.use(errorHandler);

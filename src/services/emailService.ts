@@ -42,9 +42,9 @@ export const WelcomeEmail = async (
 
 export const inviteEmail = async (
   email: string,
-  token: string,
   userId: string,
-  now: string
+  now: string,
+  token?: string
 ): Promise<void> => {
   const notificationId = uuid();
   const subject = `Welcome to leo!`;

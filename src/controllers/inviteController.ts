@@ -21,7 +21,7 @@ export const createInvite = async (req: Request, res: Response, next: NextFuncti
       const data:User = { id: uuid(), org_id: organization_id, email, password:"", manager_id: reporting_to, status: "ACTIVE", role, created_at: now, created_by: userId};
       await addUser(data);
     }
-    await inviteEmail(email, token, req.user.id, now);
+    await inviteEmail(email, req.user.id, now, token);
     res.status(201).json({ invite: token });
   } catch (err) {
     next(err);

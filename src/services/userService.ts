@@ -58,3 +58,13 @@ export const updateUser = async (
     .eq('organization_id', invite.organization_id);
   return error;
 };
+
+export const getUserInfo = async(orgId: string, userId: string) => {
+  const { data: user, error } = await supabase.from('users')
+    .select('*')
+    .eq('organization_id', orgId)
+    .eq('id', userId)
+    .single();
+  if (error) throw new AppError(error.message, 404);
+  return user;
+}
