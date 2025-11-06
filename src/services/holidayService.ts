@@ -1,17 +1,7 @@
 import { supabase } from './dbService';
 import { PostgrestError } from '@supabase/supabase-js';
 import { AppError } from '../utils/AppError';
-
-export interface Holiday {
-  id: string;
-  organization_id: string;
-  name: string;
-  holiday_date: string;
-  recurring: boolean;
-  created_by: string;
-  created_at?: string;
-  updated_at?: string;
-}
+import { Holiday } from '../types/holidayTypes';
 
 export const checkDuplicateHoliday = async (org_id: string, name: string, id?: string) => {
   const { data: existingHoliday, error } = await supabase

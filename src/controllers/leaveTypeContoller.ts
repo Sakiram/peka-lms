@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import * as leaveTypeService from '../services/leaveTypeService';
 import { getCurrentTime, uuid } from '../middleware/commonMiddleware';
-import { AppError } from '../utils/AppError';
 
 export const createLeaveType = async (req: Request, res: Response): Promise<void> => {
   try {

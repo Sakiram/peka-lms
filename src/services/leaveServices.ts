@@ -2,62 +2,7 @@ import { supabase } from './dbService';
 import { AppError } from '../utils/AppError';
 import { v4 as uuidv4 } from 'uuid';
 import { getCurrentTime } from '../middleware/commonMiddleware';
-
-export type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
-export type LeaveAction = 'CREATED' | 'UPDATED' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
-
-export interface Leave {
-  id: string;
-  organization_id: string;
-  user_id: string;
-  leave_type_id: string;
-  start_date: string;
-  end_date: string;
-  total_days: number;
-  half_day: boolean;
-  reason: string;
-  attachment_url?: string;
-  status: LeaveStatus;
-  applied_on: string;
-  reviewed_by?: string;
-  reviewed_on?: string;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface LeaveBalance {
-  id: string;
-  leave_type_id: string;
-  year: number;
-  allocated_days: number;
-  used_days: number;
-  remaining_days: number;
-  carried_forward_days: number;
-  leave_types?: {
-    name: string;
-  };
-}
-
-interface LeaveLog {
-  id: string;
-  action: string;
-  remarks: string | null;
-  created_at: string;
-  action_by: string;
-  user?: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    role: string;
-  };
-}
-
-interface LeaveFilters {
-  status?: string;
-  year?: number;
-  type?: string;
-}
+import { Leave, LeaveAction, LeaveBalance, LeaveFilters, LeaveLog, LeaveStatus } from '../types/leaveTypes';
 
 export const getUserLeaveBalance = async (orgId: string, userId: string): Promise<LeaveBalance[]> => {
   const { data, error } = await supabase
@@ -76,7 +21,7 @@ export const getUserLeaveBalance = async (orgId: string, userId: string): Promis
     .eq('user_id', userId)
     .eq('year', new Date().getFullYear())
     .order('leave_type_id', { ascending: true });
-      console.log(data);
+
   if (error) throw new AppError(error.message, 400);
   const fixedData = (data ?? []).map((field) => ({
     ...field,

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as leaveService from '../services/leaveServices';
+import * as storageService from '../services/storageService';
 import { requestEmail, reviewEmail } from '../services/emailService';
 import { getCurrentTime } from '../middleware/commonMiddleware';
 
@@ -59,6 +60,32 @@ export const applyLeave = async (req: Request, res: Response, next: NextFunction
     next(err);
   }
 };
+
+export const uploadLeaveProof = async(req: Request, res: Response, next: NextFunction) => {
+  try {
+    const file = req.file;
+    const userId = req.user?.id!;
+    const orgId = req.user?.org_id!;
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+    let attachmentUrl: string | undefined;
+    if (file) {
+      if( !allowedTypes.includes(file.mimetype)) {
+        next(new Error('Only PDF and DOCX files are allowed'));
+      }
+      attachmentUrl = await storageService.uploadAttachment(
+        userId,
+        file.buffer,
+        file.mimetype,
+      );
+    }
+    res.status(200).json({ success: true, data: attachmentUrl});
+  } catch (err) {
+    next(err);
+  }
+}
 
 export const approveLeave = async (req: Request, res: Response, next: NextFunction) => {
   try {

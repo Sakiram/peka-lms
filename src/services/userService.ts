@@ -1,6 +1,7 @@
 import { supabase } from './dbService';
 import { AppError } from '../utils/AppError';
-import { User } from '../types/user';
+import { User } from '../types/userTypes';
+import { deleteProfilePicture } from './storageService';
 
 export const checkDuplicateUser = async (org_id: string, email: string): Promise<any> => {
   const { data: existingUser, error } = await supabase
@@ -59,39 +60,6 @@ export const updateUser = async (
     .eq('email', invite.email)
     .eq('organization_id', invite.organization_id);
   return error;
-};
-
-export const uploadProfilePicture = async (userId: string, fileBuffer: Buffer, mimeType: string) => {
-  const fileName = `${userId}.webp`;
-  const filePath = `profile_pics/${fileName}`;
-
-  await deleteProfilePicture(userId);
-
-  const { error: uploadError } = await supabase.storage
-    .from('attachments')
-    .upload(filePath, fileBuffer, {
-      upsert: true,
-      contentType: mimeType,
-    });
-
-  if (uploadError) throw new AppError(uploadError.message, 400);
-
-  const { data: publicUrlData } = supabase.storage
-    .from('attachments')
-    .getPublicUrl(filePath);
-
-  return publicUrlData.publicUrl;
-};
-
-export const deleteProfilePicture = async (userId: string) => {
-  const fileName = `${userId}.webp`;
-  const { error } = await supabase.storage
-    .from('attachments')
-    .remove([`profile_pics/${fileName}`]);
-
-  if (error && !error.message.includes('not found')) {
-    console.warn(`Failed to delete old profile pic for user ${userId}:`, error.message);
-  }
 };
 
 export const updateProfile = async (orgId: string, userId: string, updates: any) => {

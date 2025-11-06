@@ -1,20 +1,7 @@
 import { getCurrentTime } from '../middleware/commonMiddleware';
 import { AppError } from '../utils/AppError';
 import { supabase } from './dbService';
-
-export interface LeaveType {
-  id: string;
-  organization_id: string;
-  name: string;
-  description?: string;
-  max_days_per_year: number;
-  requires_document: boolean;
-  carry_forward: boolean;
-  active: boolean;
-  created_by: string;
-  created_at?: string;
-  updated_at?: string;
-}
+import { LeaveType } from '../types/leaveTypes';
 
 export const checkDuplicateLeave = async (org_id: string, name: string, id?: string) => {
   const { data: existingLeave, error } = await supabase

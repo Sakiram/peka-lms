@@ -9,7 +9,6 @@ export const createHoliday = async (req: Request, res: Response, next: NextFunct
     const { name, holiday_date, recurring } = req.body;
     if (!name || !holiday_date)
       throw new AppError('Name and holiday_date are required', 400);
-
     const orgId = req.user?.org_id!;
     const userId = req.user?.id!;
     const now = getCurrentTime();

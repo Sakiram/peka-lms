@@ -1,17 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt, { SignOptions, Secret} from 'jsonwebtoken';
-import dotenv from 'dotenv';
 import { supabase } from './dbService';
-
-dotenv.config();
-
-export interface JWTPayload {
-  id: string;
-  org_id: string;
-  role: string;
-  manager_id?: string;
-  first_name?: string;
-}
+import { JWTPayload } from '../types/authTypes';
 
 export const hashPassword = async (password: string): Promise<string> => {
   const salt = await bcrypt.genSalt(10);

@@ -1,9 +1,6 @@
 import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
 import { storeNotifications } from './dbService';
 import { uuid } from '../middleware/commonMiddleware';
-
-dotenv.config();
 
 export const transporter = nodemailer.createTransport({
   service: 'gmail',

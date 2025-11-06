@@ -4,11 +4,8 @@ import {NextFunction, Request, Response} from "express";
 import { checkDuplicateOrg, createOrg } from "../services/orgService";
 import { addUser } from "../services/userService";
 import { getCurrentTime, uuid } from '../middleware/commonMiddleware';
-import { AppError, getErrorMessage } from '../utils/AppError';
-import dotenv from 'dotenv';
-import { User } from "../types/user";
-
-dotenv.config();
+import { AppError } from '../utils/AppError';
+import { User } from "../types/userTypes";
 
 export const createOrganization = async (req: Request, res: Response, next: NextFunction) => {
   try {

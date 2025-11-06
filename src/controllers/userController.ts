@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import * as userService from '../services/userService';
+import * as storageService from '../services/storageService';
 import { getErrorMessage } from '../utils/AppError';
 import { Request, Response, NextFunction } from 'express';
 
@@ -17,15 +18,16 @@ export const uploadUserProfile = async (req: Request, res: Response, next: NextF
   try {
     const file = req.file;
     const userId = req.user?.id!;
-    const orgId = req.user?.org_id!;
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
     let profileUrl: string | undefined;
     if (file) {
+       if (!allowedTypes.includes(file.mimetype)) {
+        next('Only JPG, JPEG, or PNG files are allowed');
+      }
       const buffer = await sharp(file.buffer).webp({ quality: 80 }).toBuffer();
-      profileUrl = await userService.uploadProfilePicture(userId, buffer, 'image/webp');
+      profileUrl = await storageService.uploadProfilePicture(userId, buffer, 'image/webp');
     }
-    // const updated = await userService.updateProfile(orgId, userId, { profile_pic_url: profileUrl });
     res.status(200).json({ success: true, data: profileUrl});
-      // updated });
   } catch (err) {
     next(err);
   }
