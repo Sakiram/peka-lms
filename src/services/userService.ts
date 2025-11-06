@@ -60,3 +60,108 @@ export const updateUser = async (
     .eq('organization_id', invite.organization_id);
   return error;
 };
+
+export const uploadProfilePicture = async (userId: string, fileBuffer: Buffer, mimeType: string) => {
+  const fileName = `${userId}.webp`;
+  const filePath = `profile_pics/${fileName}`;
+
+  await deleteProfilePicture(userId);
+
+  const { error: uploadError } = await supabase.storage
+    .from('attachments')
+    .upload(filePath, fileBuffer, {
+      upsert: true,
+      contentType: mimeType,
+    });
+
+  if (uploadError) throw new AppError(uploadError.message, 400);
+
+  const { data: publicUrlData } = supabase.storage
+    .from('attachments')
+    .getPublicUrl(filePath);
+
+  return publicUrlData.publicUrl;
+};
+
+export const deleteProfilePicture = async (userId: string) => {
+  const fileName = `${userId}.webp`;
+  const { error } = await supabase.storage
+    .from('attachments')
+    .remove([`profile_pics/${fileName}`]);
+
+  if (error && !error.message.includes('not found')) {
+    console.warn(`Failed to delete old profile pic for user ${userId}:`, error.message);
+  }
+};
+
+export const updateProfile = async (orgId: string, userId: string, updates: any) => {
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from('users')
+    .update({ ...updates, updated_at: now })
+    .eq('id', userId)
+    .eq('organization_id', orgId)
+    .select()
+    .single();
+
+  if (error) throw new AppError(error.message, 400);
+  return data;
+};
+
+export const getAllUsers = async (org_id: string) => {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, email, first_name, last_name, contact_no, profile_pic_url, role, join_date')
+    .eq('organization_id', org_id)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new AppError(error.message, 400);
+  return data;
+};
+
+export const deleteUser = async (id: string, org_id: string) => {
+  const { data: leaves, error: leavesError } = await supabase
+    .from('leaves')
+    .select('id')
+    .eq('user_id', id)
+    .eq('organization_id', org_id);
+
+  if (leavesError) throw new AppError(leavesError.message, 400);
+
+  const leaveIds = leaves?.map((l) => l.id) || [];
+
+  if (leaveIds.length > 0) {
+    const { error: logError } = await supabase
+      .from('leave_logs')
+      .delete()
+      .in('leave_id', leaveIds);
+
+    if (logError) throw new AppError(logError.message, 400);
+  }
+
+  const { error: leavesDelErr } = await supabase
+    .from('leaves')
+    .delete()
+    .eq('user_id', id)
+    .eq('organization_id', org_id);
+
+  if (leavesDelErr) throw new AppError(leavesDelErr.message, 400);
+
+  const { error: balanceErr } = await supabase
+    .from('leave_balances')
+    .delete()
+    .eq('user_id', id)
+    .eq('organization_id', org_id);
+
+  if (balanceErr) throw new AppError(balanceErr.message, 400);
+
+  await deleteProfilePicture(id);
+
+  const { error: userErr } = await supabase
+    .from('users')
+    .delete()
+    .eq('id', id)
+    .eq('organization_id', org_id);
+
+  if (userErr) throw new AppError(userErr.message, 400);
+};

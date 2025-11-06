@@ -1,10 +1,16 @@
 import express, { Router } from 'express';
-import { createUser } from '../controllers/userController';
+import { createUser, updateUserProfile, getAllUsers , deleteUser, uploadUserProfile } from '../controllers/userController';
 import { authenticate } from '../middleware/authMiddleware';
 import { authorize } from '../middleware/roleMiddleware';
+import multer from 'multer';
 
+const upload = multer();
 const router: Router = express.Router();
 
 router.post('/', authenticate, authorize('ADMIN'), createUser);
+router.get('/', authenticate, authorize('ADMIN', 'HR'), getAllUsers);
+router.post('/upload-pic', authenticate, upload.single('profile_pic'), uploadUserProfile);
+router.put('/profile', authenticate, updateUserProfile);
+router.delete('/:id', authenticate, authorize('ADMIN', 'HR'), deleteUser);
 
 export default router;
