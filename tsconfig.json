@@ -10,6 +10,6 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts", "src/controllers/inviteController.ts", "src/controllers/orgController.ts", "src/controllers/userController.ts", "src/controllers/authController.ts"],
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules"]
 }

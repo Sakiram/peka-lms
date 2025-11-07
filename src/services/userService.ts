@@ -76,15 +76,36 @@ export const updateProfile = async (orgId: string, userId: string, updates: any)
   return data;
 };
 
-export const getAllUsers = async (org_id: string) => {
-  const { data, error } = await supabase
-    .from('users')
-    .select('id, email, first_name, last_name, contact_no, profile_pic_url, role, join_date')
-    .eq('organization_id', org_id)
-    .order('created_at', { ascending: false });
 
+interface UserQueryOptions {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  order?: "asc" | "desc";
+  role?: string;
+  status?: string;
+  search?: string;
+}
+
+export const getAllUsers = async (org_id: string, options: UserQueryOptions) => {
+  const { page = 1, limit = 10, sortBy = "created_at", order = "desc", role, status, search } = options;
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+  let query = supabase
+    .from('users')
+    .select(`id,email,username,first_name,last_name,status,role,contact_no,profile_pic_url,join_date,manager_id,manager:manager_id(username)`, 
+      { count: "exact" })
+    .eq('organization_id', org_id)
+    .order(sortBy, { ascending: order === "asc" })
+    .range(from, to);
+  if (role) query = query.eq("role", role);
+  if (status) query = query.eq("status", status);
+  if (search) {
+    query = query.or(`username.ilike.%${search}%,email.ilike.%${search}%`);
+  }
+  const { data, count, error } = await query;
   if (error) throw new AppError(error.message, 400);
-  return data;
+  return { page, limit, total: count || 0, totalPages: Math.ceil((count || 0) / limit), data};
 };
 
 export const deleteUser = async (id: string, org_id: string) => {

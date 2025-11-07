@@ -26,7 +26,7 @@ export const login = async (req: Request, res:Response) => {
 
 export const setPassword = async (req: Request, res: Response) => {
   const { password, firstName, lastName, userName } = req.body;
-  const token = req.query.token as string;
+  const token = req.params.token;
 
   const { invite, inviteErr } = await authService.getInviteData(token);
   if (!invite || inviteErr) throw new AppError('Invalid token', 400);

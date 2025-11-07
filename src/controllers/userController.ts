@@ -35,12 +35,10 @@ export const uploadUserProfile = async (req: Request, res: Response, next: NextF
 
 export const updateUserProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { contact_no, profile_pic_url } = req.body;
-    const userId = req.user?.id!;
+    const userData = req.body;
+    const userId = req.params.id || req.user?.id!;
     const orgId = req.user?.org_id!;
-    const updated = await userService.updateProfile(orgId, userId, {
-      contact_no, profile_pic_url
-    });
+    const updated = await userService.updateProfile(orgId, userId, userData);
 
     res.status(200).json({ success: true, data: updated });
   } catch (err) {
@@ -51,7 +49,17 @@ export const updateUserProfile = async (req: Request, res: Response, next: NextF
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const org_id = req.user.org_id!;
-    const users = await userService.getAllUsers(org_id);
+    const { page = "1", limit = "10", sortBy = "created_at", order = "desc",
+      role, status, search,} = req.query as Record<string, string>;
+    const users = await userService.getAllUsers(org_id, {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sortBy,
+      order: order.toLowerCase() === "asc" ? "asc" : "desc",
+      role,
+      status,
+      search,
+    });
     res.status(200).json({ success: true, data: users });
   } catch (err) {
     next(err);

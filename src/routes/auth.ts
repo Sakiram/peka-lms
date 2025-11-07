@@ -5,6 +5,6 @@ const router: Router = express.Router();
 
 router.post('/login', login);
 router.post('/logout', logout);
-router.post('/set-password', setPassword);
+router.post('/set-password/:token', setPassword);
 
 export default router;
