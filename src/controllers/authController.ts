@@ -14,7 +14,14 @@ export const login = async (req: Request, res:Response) => {
   if (!valid) throw new AppError('Invalid Password', 400)
 
   const token = authService.generateToken({ id: user.id, org_id: user.organization_id, role: user.role, manager_id: user.manager_id, first_name: user.first_name });
-  res.json({ token, user: user });
+   res.cookie("token", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      // secure: process.env.NODE_ENV === "production",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+  let {password_hash, ...endUser} = user;
+  res.json({ token, user: endUser });
 };
 
 export const setPassword = async (req: Request, res: Response) => {
@@ -32,3 +39,12 @@ export const setPassword = async (req: Request, res: Response) => {
   if (error) throw new AppError( error.message, 400);
   res.json({ message: 'Password set successfully' });
 };
+
+export const logout = (req: Request, res: Response) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    sameSite: "lax",
+    // secure: process.env.NODE_ENV === "production",
+  });
+  res.status(200).json({ success: true, message: "Logged out successfully" });
+}

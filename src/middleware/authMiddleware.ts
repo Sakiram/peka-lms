@@ -10,7 +10,7 @@ declare global {
 }
 
 export const authenticate = (req: Request, res: Response, next: NextFunction): void => {
-  const token = req.headers.authorization?.split(' ')[1];
+  const token = req.cookies.token;
   if (!token) res.status(401).json({ message: 'Unauthorized' });
 
   try {
@@ -21,3 +21,16 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
     res.status(401).json({ message: 'Invalid token' });
   }
 };
+
+export const logout = (req: Request, res: Response) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+  res.status(200).json({ success: true, message: "Logged out successfully" });
+};
+
+export const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(",").map(origin => origin.trim())
+  : [];

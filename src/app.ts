@@ -1,4 +1,5 @@
 import express from 'express';
+import cookieParser from "cookie-parser";
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
@@ -9,11 +10,22 @@ import { errorHandler } from "./middleware/errorHandler";
 import leaveTypeRoutes from './routes/leaveTypes';
 import holidayRoutes from './routes/holiday';
 import leaveRoutes from './routes/leave';
+import { allowedOrigins } from './middleware/authMiddleware';
 
 dotenv.config();
 const app = express();
-app.use(cors());
+
+app.use(cors({
+   origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("CORS not allowed"), false);
+  },
+  credentials: true,
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 const API_PREFIX = '/api/v1';
 
