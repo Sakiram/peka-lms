@@ -49,9 +49,10 @@ export const updateUserProfile = async (req: Request, res: Response, next: NextF
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const org_id = req.user.org_id!;
+    const id = req.user.id!;
     const { page = "1", limit = "10", sortBy = "created_at", order = "desc",
       role, status, search,} = req.query as Record<string, string>;
-    const users = await userService.getAllUsers(org_id, {
+    const users = await userService.getAllUsers(id, org_id, {
       page: parseInt(page),
       limit: parseInt(limit),
       sortBy,

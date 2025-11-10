@@ -28,6 +28,6 @@ export const getInviteData = async (token: string): Promise<{ invite: any; invit
 };
 
 export const verfyEmail = async (email: string): Promise<{ user: any; error: any }> => {
-  const { data: user, error } = await supabase.from('users').select('*').eq('email', email).single();
+  const { data: user, error } = await supabase.from('users').select('*, organization:organizations!users_organization_id_fkey(org_name)').eq('email', email).single();
   return { user, error };
 };

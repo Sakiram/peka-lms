@@ -87,13 +87,14 @@ interface UserQueryOptions {
   search?: string;
 }
 
-export const getAllUsers = async (org_id: string, options: UserQueryOptions) => {
+export const getAllUsers = async (id : string, org_id: string, options: UserQueryOptions) => {
   const { page = 1, limit = 10, sortBy = "created_at", order = "desc", role, status, search } = options;
   const from = (page - 1) * limit;
   const to = from + limit - 1;
   let query = supabase
     .from('users')
-    .select(`id,email,username,first_name,last_name,status,role,contact_no,profile_pic_url,join_date,manager_id,manager:manager_id(username)`, 
+    .select(`id, email, username, first_name, last_name, status, role, contact_no, 
+      profile_pic_url, join_date, manager_id, manager:manager_id(username)`, 
       { count: "exact" })
     .eq('organization_id', org_id)
     .order(sortBy, { ascending: order === "asc" })
