@@ -10,7 +10,6 @@ export const checkDuplicateHoliday = async (org_id: string, name: string, id?: s
     .eq('organization_id', org_id)
     .eq('name', name)
     .maybeSingle();
-    
   if (error) throw new AppError(error.message, 400);
   if (existingHoliday && id!= existingHoliday.id) throw new AppError(`Leave with name: ${name} already exists`, 400);
   if ( existingHoliday && !id ) throw new AppError(`Leave with name: ${name} already exists`, 400);
@@ -21,7 +20,7 @@ export const addHoliday = async (holiday: Holiday) => {
   if (error) throw new AppError(error.message, 400);
 };
 
-export const getHolidays = async (org_id: string, nextDays?: number): Promise<Holiday[]> => {
+export const getHolidays = async (org_id: string, nextDays?: number, all?: boolean): Promise<Holiday[]> => {
   const { data, error } = await supabase
     .from('holidays')
     .select('*')
@@ -30,22 +29,23 @@ export const getHolidays = async (org_id: string, nextDays?: number): Promise<Ho
 
   if (error) throw new AppError(error.message, 400);
   if (!data) return [];
-  
   const today = new Date();
   const year = today.getFullYear();
   const nextDate = new Date();
-  if (nextDays && !isNaN(nextDays)) 
-    nextDate.setDate(today.getDate() + nextDays);
+  if (nextDays && !isNaN(nextDays)) nextDate.setDate(today.getDate() + nextDays);
 
   return data
     .map((h) => {
       const baseDate = new Date(h.holiday_date);
-      const adjustedDate = h.recurring ? new Date(`${year}-${baseDate.getMonth() + 1}-${baseDate.getDate()}`) : baseDate;
+      const adjustedDate = h.recurring
+        ? new Date(`${year}-${String(baseDate.getMonth() + 1).padStart(2, '0')}-${String(baseDate.getDate()).padStart(2, '0')}`)
+        : baseDate;
 
       const isUpcoming = adjustedDate >= today;
+      const dateStr = `${adjustedDate.getFullYear()}-${String(adjustedDate.getMonth() + 1).padStart(2, '0')}-${String(adjustedDate.getDate()).padStart(2, '0')}`;
       return {
         ...h,
-        holiday_date: adjustedDate.toISOString().split('T')[0],
+        holiday_date: dateStr,
         is_upcoming: isUpcoming,
       };
     })
@@ -54,6 +54,7 @@ export const getHolidays = async (org_id: string, nextDays?: number): Promise<Ho
       if (nextDays && !isNaN(nextDays)) {
         return date >= today && date <= nextDate;
       }
+      if (all) return true;
       return date.getFullYear() === year;
     });
 };
