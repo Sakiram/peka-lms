@@ -65,7 +65,8 @@ export const requestEmail = async ( email: string, managerName: string, userId: 
 export const reviewEmail = async ( email: string, firstName: string, userId: string, leaveStatus:string, now: string): Promise<void> => {
   const notificationId = uuid();
   const subject = `your leave has been reviewed`;
+  let leaveStat = leaveStatus === 'APPROVED' ? 'LEAVE_APPROVED' : 'LEAVE_REJECTED';
   const msg = reviewMsg(firstName, leaveStatus);
   await sendMail(email, subject, msg);
-  await storeNotifications(notificationId, userId, leaveStatus, subject, now);
+  await storeNotifications(notificationId, userId, 'LEAVE_APPROVED', subject, now);
 };

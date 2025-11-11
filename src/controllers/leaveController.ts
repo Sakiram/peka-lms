@@ -89,7 +89,7 @@ export const uploadLeaveProof = async(req: Request, res: Response, next: NextFun
 
 export const approveLeave = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { userId } = req.params;
+    const { id:userId } = req.params;
     const managerId = req.user?.id!;
     const leaveStatus = 'APPROVED';
     const now = getCurrentTime();
