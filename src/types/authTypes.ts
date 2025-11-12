@@ -4,4 +4,5 @@ export interface JWTPayload {
   role: string;
   manager_id?: string;
   first_name?: string;
+  username?: string;
 }

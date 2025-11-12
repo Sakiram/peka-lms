@@ -13,7 +13,7 @@ export const login = async (req: Request, res:Response) => {
   const valid = await authService.comparePassword(password, user.password_hash);
   if (!valid) throw new AppError('Invalid Password', 400)
 
-  const token = authService.generateToken({ id: user.id, org_id: user.organization_id, role: user.role, manager_id: user.manager_id, first_name: user.first_name });
+  const token = authService.generateToken({ id: user.id, org_id: user.organization_id, role: user.role, manager_id: user.manager_id, first_name: user.first_name, username: user.username });
    res.cookie("token", token, {
       httpOnly: true,
       sameSite: "lax",

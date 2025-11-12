@@ -33,8 +33,8 @@ export const getRequestedLeaves = async (req: Request, res: Response, next: Next
 
 export const applyLeave = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { leave_type_id, start_date, end_date, total_days, half_day, reason, attachment_url } = req.body;
-    const orgId = req.user?.org_id!;
+    const { leave_type_id, leave_type_name, start_date, end_date, total_days, half_day, reason, attachment_url } = req.body;
+    const {org_id: orgId, username }= req.user!;
     const userId = req.user?.id!;
     const manager_id  = req.user?.manager_id!;
     const year = new Date(start_date).getFullYear();
@@ -53,8 +53,8 @@ export const applyLeave = async (req: Request, res: Response, next: NextFunction
       attachment_url,
       created_by: userId,
     }, manager_id);
-    await requestEmail(manager.email, manager.first_name, req.user.id, now,);
-
+    await requestEmail(manager.email, manager.first_name, req.user.id, now, username, leave_type_name, start_date, end_date);
+    console.log(data);
     res.status(201).json({ message: 'Leave applied successfully', data });
   } catch (err) {
     next(err);
@@ -89,12 +89,13 @@ export const uploadLeaveProof = async(req: Request, res: Response, next: NextFun
 
 export const approveLeave = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id:userId } = req.params;
-    const managerId = req.user?.id!;
+    const { id:leaveId } = req.params;
+    const { leaveType } = req.body;
+    const { username, id: managerId } = req.user!;
     const leaveStatus = 'APPROVED';
     const now = getCurrentTime();
-    const user = await leaveService.updateLeaveStatus(userId, managerId, leaveStatus);
-    await reviewEmail(user.email, user.first_name, managerId, leaveStatus, now);
+    const user = await leaveService.updateLeaveStatus(leaveId, managerId, leaveStatus);
+    await reviewEmail(user.email, user.first_name, managerId, leaveStatus, now, username, leaveType);
     res.status(200).json({ message: 'Leave approved successfully' });
   } catch (err) {
     next(err);
@@ -104,11 +105,12 @@ export const approveLeave = async (req: Request, res: Response, next: NextFuncti
 export const rejectLeave = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const managerId = req.user?.id!;
+    const { leaveType } = req.body;
+    const { username, id: managerId } = req.user!;
     const leaveStatus = 'REJECTED';
     const now = getCurrentTime();
     const user = await leaveService.updateLeaveStatus(id, managerId, leaveStatus);
-    await reviewEmail(user.email, user.first_name, managerId, leaveStatus, now);
+    await reviewEmail(user.email, user.first_name, managerId, leaveStatus, now, username, leaveType);
     res.status(200).json({ message: 'Leave rejected successfully' });
   } catch (err) {
     next(err);

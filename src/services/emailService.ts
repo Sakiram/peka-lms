@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import { storeNotifications } from './dbService';
 import { uuid } from '../middleware/commonMiddleware';
+import { baseEmailTemplate, inviteEmailTemplate, requestEmailTemplate, reviewEmailTemplate, welcomeEmailTemplate } from '../templates/emailTemplates';
 
 export const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -32,41 +33,37 @@ export const WelcomeEmail = async (
   userId: string
 ): Promise<void> => {
   const subject = `Welcome to ${org_name}!`;
-  const msg = `<h2>Hi ${firstname},</h2><p>Your org ${org_name} is onboarded successfully.</p>`;
+  const content = welcomeEmailTemplate(org_email, org_name, firstname);
+  const msg = baseEmailTemplate(content).replace(/{{ORG_NAME}}/g, org_name);
   await sendMail(org_email, subject, msg);
   await storeNotifications(notificationId, userId, 'INVITE_SENT', subject, now);
 };
 
-const requestMsg = (manager_name: string) => {
-  return `<h2>Leave Request</h2><p>Hi ${manager_name}, You have a leave request</p>`;
-}
-
-const reviewMsg = (firstName: string, leaveStatus: string) => {
-  return `<h2>Leave Request has been ${leaveStatus}</h2><p>Hi ${firstName}, Your leave request has been ${leaveStatus}</p>`;
-}
-
 export const inviteEmail = async ( email: string, userId: string, now: string, token: string, org_name: string, firstName: string): Promise<void> => {
   const notificationId = uuid();
   const subject = `Welcome to ${org_name}!`;
-  const msg = `<h2>Hi ${firstName},</h2><p>Your are onboarded into ${org_name} successfully.</p>
-  <p>Click <a href="http://localhost:5000/auth/set-password?token=${token}">here</a> to set-password and login</p>`;
+  const content = inviteEmailTemplate(token, org_name, firstName);
+  const msg = baseEmailTemplate(content).replace(/{{ORG_NAME}}/g, org_name);
   await sendMail(email, subject, msg);
   await storeNotifications(notificationId, userId, 'INVITE_SENT', subject, now);
 };
 
-export const requestEmail = async ( email: string, managerName: string, userId: string, now: string): Promise<void> => {
+export const requestEmail = async ( email: string, managerName: string, userId: string, now: string, userName: string, leave_type_name: string, start_date: string, end_date: string): Promise<void> => {
   const notificationId = uuid();
-  const subject = `Leave Request`;
-  const msg = requestMsg(managerName);
+  const subject = `New Leave Request Pending Review`;
+  const content = requestEmailTemplate(managerName, userName, leave_type_name, start_date, end_date);
+  const msg = baseEmailTemplate(content).replace(/{{ORG_NAME}}/g, 'Leave Management System');
   await sendMail(email, subject, msg);
   await storeNotifications(notificationId, userId, 'LEAVE_APPLIED', subject, now);
 };
 
-export const reviewEmail = async ( email: string, firstName: string, userId: string, leaveStatus:string, now: string): Promise<void> => {
+export const reviewEmail = async ( email: string, firstName: string, userId: string, leaveStatus:string, now: string, reviewedBy?: string, leaveType?: string): Promise<void> => {
   const notificationId = uuid();
-  const subject = `your leave has been reviewed`;
+  const subject = `Your Leave Request Has Been ${leaveStatus}`;
   let leaveStat = leaveStatus === 'APPROVED' ? 'LEAVE_APPROVED' : 'LEAVE_REJECTED';
-  const msg = reviewMsg(firstName, leaveStatus);
+  const isApproved = leaveStatus === 'APPROVED';
+  const content = reviewEmailTemplate(firstName, leaveStatus, leaveType, reviewedBy, isApproved);
+  const msg = baseEmailTemplate(content).replace(/{{ORG_NAME}}/g, 'Leave Management System');
   await sendMail(email, subject, msg);
-  await storeNotifications(notificationId, userId, 'LEAVE_APPROVED', subject, now);
+  await storeNotifications(notificationId, userId, leaveStat, subject, now);
 };
