@@ -99,7 +99,13 @@ export const getAllUsers = async (id : string, org_id: string, options: UserQuer
     .eq('organization_id', org_id)
     .order(sortBy, { ascending: order === "asc" })
     .range(from, to);
-  if (role) query = query.eq("role", role);
+  if (role){
+    let roles = role.split(',');
+    if (roles.length > 1)
+      query = query.in("role", roles);
+    else
+      query = query.eq("role", role);
+  } 
   if (status) query = query.eq("status", status);
   if (search) {
     query = query.or(`username.ilike.%${search}%,email.ilike.%${search}%`);
