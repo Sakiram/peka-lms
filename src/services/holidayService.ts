@@ -30,6 +30,7 @@ export const getHolidays = async (org_id: string, nextDays?: number, all?: boole
   if (error) throw new AppError(error.message, 400);
   if (!data) return [];
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const year = today.getFullYear();
   const nextDate = new Date();
   if (nextDays && !isNaN(nextDays)) nextDate.setDate(today.getDate() + nextDays);
