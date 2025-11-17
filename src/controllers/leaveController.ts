@@ -23,8 +23,9 @@ export const getMyLeaves = async (req: Request, res: Response, next: NextFunctio
 export const getRequestedLeaves = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const orgId = req.user?.org_id!;
+    const filter = req.query.status ? String(req.query.status).toUpperCase() : undefined;
     const managerId = req.user?.id!;
-    const leaves = await leaveService.getManagerLeaves(orgId, managerId);
+    const leaves = await leaveService.getManagerLeaves(orgId, managerId, filter);
     res.status(200).json({ success: true, data: leaves });
   } catch (err) {
     next(err);

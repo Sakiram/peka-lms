@@ -49,7 +49,7 @@ export const getUserLeaves = async (orgId: string, userId: string, filters?: Lea
   return data ?? [];
 };
 
-export const getManagerLeaves = async (orgId: string, managerId: string): Promise<Leave[]> => {
+export const getManagerLeaves = async (orgId: string, managerId: string, filter?: string): Promise<Leave[]> => {
   const { data: subordinates, error: subErr } = await supabase
     .from('users')
     .select('id')
@@ -60,7 +60,7 @@ export const getManagerLeaves = async (orgId: string, managerId: string): Promis
   if (!subordinates || subordinates.length === 0) return [];
   const subordinateIds = subordinates.map((user) => user.id);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('leaves')
     .select(`
       *,
@@ -71,7 +71,8 @@ export const getManagerLeaves = async (orgId: string, managerId: string): Promis
     .eq('organization_id', orgId)
     .in('user_id', subordinateIds)
     .order('created_at', { ascending: false });
-
+  if (filter) query = query.eq('status', filter);
+  const { data, error } = await query;
   if (error) throw new AppError(error.message, 400);
   return data ?? [];
 };
@@ -117,7 +118,6 @@ export const ensureLeaveBalance = async (
   if (balanceErr) throw new AppError(balanceErr.message, 400);
   if (balance) return balance;
 
-  // Get leave type to know allocation
   const { data: leaveType, error: leaveTypeErr } = await supabase
     .from('leave_types')
     .select('max_days_per_year')
@@ -212,7 +212,6 @@ export const updateLeaveStatus = async (
   if (leaveErr) throw new AppError(leaveErr.message, 400);
   if (!leave) throw new AppError('Leave not found', 404);
 
-  // Only manager can act
   const { data: user } = await supabase
     .from('users')
     .select('manager_id, email, first_name')
@@ -234,7 +233,6 @@ export const updateLeaveStatus = async (
 
   if (updateErr) throw new AppError(updateErr.message, 400);
 
-  // If approved, deduct from balance
   if (action === 'APPROVED') {
     const year = new Date(leave.start_date).getFullYear();
     const { data: balance, error: balErr } = await supabase

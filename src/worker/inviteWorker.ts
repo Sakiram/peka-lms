@@ -24,7 +24,7 @@ const processInviteJob = async (job: Job<InviteJobData>) => {
     const token = randomBytes(32).toString("hex");
     const now = getCurrentTime();
     const id = uuid();
-    const status = "ACTIVE";
+    const status = "INACTIVE";
     await addInvites(
       id, 
       organization_id || '', 
