@@ -54,7 +54,6 @@ export const applyLeave = async (req: Request, res: Response, next: NextFunction
       created_by: userId,
     }, manager_id);
     await requestEmail(manager.email, manager.first_name, req.user.id, now, username, leave_type_name, start_date, end_date);
-    console.log(data);
     res.status(201).json({ message: 'Leave applied successfully', data });
   } catch (err) {
     next(err);

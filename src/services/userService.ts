@@ -115,6 +115,19 @@ export const getAllUsers = async (id : string, org_id: string, options: UserQuer
   return { page, limit, total: count || 0, totalPages: Math.ceil((count || 0) / limit), data};
 };
 
+export const getUserById = async (id: string) => {
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, email, first_name, last_name, username, role, organization_id, manager_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw new AppError(error.message, 500);
+  if (!data) throw new AppError("User not found", 404);
+
+  return data;
+};
+
 export const deleteUser = async (id: string, org_id: string) => {
   const { data: leaves, error: leavesError } = await supabase
     .from('leaves')

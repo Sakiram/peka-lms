@@ -11,6 +11,7 @@ import leaveTypeRoutes from './routes/leaveTypes';
 import holidayRoutes from './routes/holiday';
 import leaveRoutes from './routes/leave';
 import { allowedOrigins } from './middleware/authMiddleware';
+import { inviteWorker } from "./worker/inviteWorker";
 
 dotenv.config();
 const app = express();
@@ -40,4 +41,9 @@ app.use(`${API_PREFIX}/holidays`, holidayRoutes);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  inviteWorker.on("ready", () =>
+    console.log("Invite Worker is running...")
+  );
+});
