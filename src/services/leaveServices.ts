@@ -49,7 +49,7 @@ export const getUserLeaves = async (orgId: string, userId: string, filters?: Lea
   return data ?? [];
 };
 
-export const getManagerLeaves = async (orgId: string, managerId: string, filter?: string): Promise<Leave[]> => {
+export const getManagerLeaves = async (orgId: string, managerId: string, filter?: string, page: number = 1, limit: number = 10): Promise<{ data: Leave[], total: number; totalPages: number; page: number; limit: number }> => {
   const { data: subordinates, error: subErr } = await supabase
     .from('users')
     .select('id')
@@ -57,8 +57,10 @@ export const getManagerLeaves = async (orgId: string, managerId: string, filter?
     .eq('manager_id', managerId);
 
   if (subErr) throw new AppError(subErr.message, 400);
-  if (!subordinates || subordinates.length === 0) return [];
+  if (!subordinates || subordinates.length === 0) return { data: [], total: 0, totalPages: 0, page, limit };
   const subordinateIds = subordinates.map((user) => user.id);
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
 
   let query = supabase
     .from('leaves')
@@ -67,14 +69,21 @@ export const getManagerLeaves = async (orgId: string, managerId: string, filter?
       applicant:users!leaves_user_id_fkey(email, first_name, last_name),
       approver:users!leaves_approved_by_fkey(email, first_name, last_name),
       leave_types(name)
-    `)
+    `, { count: 'exact' })
     .eq('organization_id', orgId)
     .in('user_id', subordinateIds)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(from, to);
   if (filter) query = query.eq('status', filter);
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) throw new AppError(error.message, 400);
-  return data ?? [];
+  return {
+    data: data ?? [],
+    total: count ?? 0,
+    totalPages: Math.ceil((count ?? 0) / limit),
+    page,
+    limit
+  };
 };
 
 export const getLeaveLogs = async (leaveId: string): Promise<LeaveLog[]> => {

@@ -25,7 +25,9 @@ export const getRequestedLeaves = async (req: Request, res: Response, next: Next
     const orgId = req.user?.org_id!;
     const filter = req.query.status ? String(req.query.status).toUpperCase() : undefined;
     const managerId = req.user?.id!;
-    const leaves = await leaveService.getManagerLeaves(orgId, managerId, filter);
+    const page = req.query.page ? parseInt(String(req.query.page), 10) : 1;
+    const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 10;
+    const leaves = await leaveService.getManagerLeaves(orgId, managerId, filter, page, limit);
     res.status(200).json({ success: true, data: leaves });
   } catch (err) {
     next(err);
