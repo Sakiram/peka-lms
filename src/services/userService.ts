@@ -2,6 +2,7 @@ import { supabase } from './dbService';
 import { AppError } from '../utils/AppError';
 import { User } from '../types/userTypes';
 import { deleteProfilePicture } from './storageService';
+import { redis } from '../worker/redis';
 
 export const checkDuplicateUser = async (org_id: string, email: string): Promise<any> => {
   const { data: existingUser, error } = await supabase
@@ -85,6 +86,22 @@ interface UserQueryOptions {
   role?: string;
   status?: string;
   search?: string;
+}
+
+export const getCacheKey = (org_id: string, id: string, options: UserQueryOptions) => {
+  const { page, limit, sortBy, order, role, status, search } = options;
+  return `users:${org_id}:${id}:${page}:${limit}:${sortBy}:${order}:${role || ""}:${status || ""}:${search || ""}`;
+}
+
+export const invalidateUserCache = async (org_id: string, id: string) => {
+  let cursor = '0';
+  do {
+    const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', `users:${org_id}:${id}:*`, 'COUNT', 100);
+    if (keys.length) {
+      await redis.del(...keys);
+    }
+    cursor = nextCursor;
+  } while (cursor !== '0');
 }
 
 export const getAllUsers = async (id : string, org_id: string, options: UserQueryOptions) => {

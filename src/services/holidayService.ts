@@ -2,6 +2,7 @@ import { supabase } from './dbService';
 import { PostgrestError } from '@supabase/supabase-js';
 import { AppError } from '../utils/AppError';
 import { Holiday } from '../types/holidayTypes';
+import { redis } from '../worker/redis';
 
 export const checkDuplicateHoliday = async (org_id: string, name: string, id?: string) => {
   const { data: existingHoliday, error } = await supabase
@@ -19,6 +20,21 @@ export const addHoliday = async (holiday: Holiday) => {
   const { error } = await supabase.from('holidays').insert([holiday]);
   if (error) throw new AppError(error.message, 400);
 };
+
+export const getHolidaysCacheKey = (orgId: string, rangeDays?: number, all?: boolean) => {
+  return `holidays:${orgId}:${rangeDays ?? 'none'}:${all ? 'all' : 'upcoming'}`;
+}
+
+export const invalidateHolidaysCache = async (org_id: string) => {
+  let cursor = '0';
+  do {
+    const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', `holidays:${org_id}:*`, 'COUNT', 100);
+    if (keys.length) {
+      await redis.del(...keys);
+    }
+    cursor = nextCursor;
+  } while (cursor !== '0');
+}
 
 export const getHolidays = async (org_id: string, nextDays?: number, all?: boolean): Promise<Holiday[]> => {
   const { data, error } = await supabase
